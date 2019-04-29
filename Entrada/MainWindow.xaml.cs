@@ -74,19 +74,53 @@ namespace Entrada
             int bytesGrabados = e.BytesRecorded;
             float acumulador = 0.0f;
 
-            for (int i = 0; i < bytesGrabados; i+=2)
+            double numeroDeMuestras =
+                bytesGrabados / 2;
+            int exponente = 1;
+            int numeroDeMuestrasComplejas = 0;
+            int bitsMaximos = 0;
+
+            do
             {
-                // TRANSFORMANDO 2 BYTES SEPARADOS en una muesstra de 16 bits:
-                // 1. Toma el segundo byte y le antepone ocho 0's al principio.
-                // 2. Hace un OR con el primer byte al cual automaticamente se le llenan ocho 0's al final.
-                short muestra = (short)(buffer[i + 1] << 8 | buffer[i]);
+                bitsMaximos = (int)Math.Pow(2, exponente);
+                exponente++;
+            } while (bitsMaximos < numeroDeMuestras);
 
-                float muestra32bits = muestra / 32768.9f;
+            numeroDeMuestrasComplejas = bitsMaximos / 2;
+            exponente--;
+
+            Complex[] señalCompleja =
+                new Complex[numeroDeMuestrasComplejas];
+
+            for (int i = 0; i < bytesGrabados; i += 2)
+            {
+                //Transformando 2 bytes separados
+                //en una muestra de 16 bits
+                //1.- Toma el segundo byte y el antepone
+                //     8 0's al principio
+                //2.- Hace un OR con el primer byte, al cual
+                //   automaticamente se le llenan 8 0's al final
+                short muestra =
+                    (short)(buffer[i + 1] << 8 | buffer[i]);
+                float muestra32bits =
+                    (float)muestra / 32768.0f;
                 acumulador += Math.Abs(muestra32bits);
-            }
 
-            float promedio = acumulador / (bytesGrabados / 2);
+                if (i / 2 < numeroDeMuestrasComplejas)
+                {
+                    señalCompleja[i / 2].X =
+                        muestra32bits;
+                }
+
+            }
+            float promedio = acumulador /
+                (bytesGrabados / 2.0f);
             sldMicrofono.Value = (double)promedio;
+
+            if (promedio > 0)
+            {
+                FastFourierTransform.FFT(true, exponente, señalCompleja);
+            }
         }
 
         private void BtnDetener_Click(object sender, RoutedEventArgs e)
